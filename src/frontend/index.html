@@ -8,43 +8,9 @@
   </head>
   <body>
     <main class="app">
-      <header>
-        <h1>RAG Knowledge Assistant</h1>
-      </header>
-
-      <nav class="tabs" aria-label="Main tabs">
-        <button class="tab is-active" data-tab="chat" type="button">Chat</button>
-        <button class="tab" data-tab="ingest" type="button">Ingest Docs</button>
-        <button class="tab" data-tab="audit" type="button">Audit Trail</button>
-      </nav>
-
-      <section id="chat" class="panel is-active">
-        <label for="question">Ask a question</label>
-        <textarea id="question" rows="4" placeholder="What is in my documents?"></textarea>
-        <div class="row">
-          <button id="askButton" type="button">Ask</button>
-        </div>
-        <pre id="chatOutput">Answer will appear here.</pre>
-      </section>
-
-      <section id="ingest" class="panel">
-        <label class="dropzone" id="dropzone" for="fileInput">Drop a .txt/.md/.pdf file here or click to select</label>
-        <input id="fileInput" type="file" accept=".txt,.md,.pdf" />
-        <div class="row">
-          <button id="uploadButton" type="button">Upload</button>
-        </div>
-        <pre id="ingestOutput">Upload status will appear here.</pre>
-      </section>
-
-      <section id="audit" class="panel">
-        <div class="row">
-          <button id="refreshAuditButton" type="button">Refresh Audit</button>
-        </div>
-        <h2>Stats</h2>
-        <pre id="auditStats">No data.</pre>
-        <h2>Recent Queries</h2>
-        <pre id="auditQueries">No data.</pre>
-      </section>
+      <h1>RAG Knowledge Assistant</h1>
+      <button id="healthButton" type="button">Check Health</button>
+      <pre id="healthOutput" aria-live="polite">Press "Check Health" to query backend.</pre>
     </main>
     <script type="module" src="./main.ts"></script>
   </body>
