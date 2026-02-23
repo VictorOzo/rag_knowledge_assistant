@@ -1,0 +1,83 @@
+:root {
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+body {
+  margin: 0;
+}
+
+.app {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tab,
+button {
+  border: 1px solid #94a3b8;
+  background: #e2e8f0;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.tab.is-active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.panel {
+  display: none;
+}
+
+.panel.is-active {
+  display: block;
+}
+
+textarea {
+  width: 100%;
+  margin-top: 0.4rem;
+  margin-bottom: 0.8rem;
+}
+
+.row {
+  margin: 0.5rem 0 1rem;
+}
+
+.dropzone {
+  display: block;
+  padding: 1rem;
+  border: 2px dashed #94a3b8;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.dropzone.dragover {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
+input[type='file'] {
+  margin-bottom: 1rem;
+}
+
+pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 1rem;
+  border-radius: 8px;
+  min-height: 140px;
+  overflow: auto;
+}

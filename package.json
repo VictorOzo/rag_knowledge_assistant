@@ -1,0 +1,33 @@
+{
+  "name": "rag_knowledge_assistant",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:backend": "tsx watch src/backend/index.ts",
+    "dev:frontend": "vite --config vite.config.ts",
+    "chroma": "chroma run --host 0.0.0.0 --port 8000",
+    "dev": "concurrently -k -n chroma,backend,frontend -c yellow,cyan,magenta \"npm run chroma\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "better-sqlite3": "^11.7.0",
+    "chromadb": "^1.9.2",
+    "dotenv": "^16.4.7",
+    "hono": "^4.6.20",
+    "zod": "^3.24.1",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.13.5",
+    "concurrently": "^9.1.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.1",
+    "vitest": "^3.0.5",
+    "@types/pdf-parse": "^1.1.5"
+  }
+}
