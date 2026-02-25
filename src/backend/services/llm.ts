@@ -41,7 +41,7 @@ export async function generateAnswer(params: GenerateAnswerParams): Promise<stri
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: llmModel,
-      prompt,
+      prompt: params.prompt,
       stream: false,
       keep_alive: keepAlive,
       options: {
@@ -60,4 +60,14 @@ export async function generateAnswer(params: GenerateAnswerParams): Promise<stri
 
   const payload = (await response.json()) as { response?: string };
   return payload.response?.trim() || 'I do not know based on the provided documents.';
+}
+
+export async function generateAnswer(params: GenerateAnswerParams): Promise<string> {
+  const prompt = getPrompt(params.question, params.context);
+  return generateAnswerFromPrompt({
+    prompt,
+    numPredict: params.numPredict,
+    temperature: params.temperature,
+    keepAlive: params.keepAlive,
+  });
 }

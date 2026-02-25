@@ -15,19 +15,34 @@ type HealthResponse = {
   auditDb?: { ok?: boolean; path?: string; error?: string };
 };
 
-type Source = {
+type DocSource = {
+  type: "doc";
   id?: string;
-  docId?: string;
-  index?: number;
+  docId: string;
+  index: number;
   distance?: number;
 };
 
-type QueryResponse = {
+type WebSource = {
+  type: "web";
+  title: string;
+  url: string;
+  snippet?: string;
+};
+
+type ChatSource = DocSource | WebSource;
+
+type ChatTurn = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+type ChatResponse = {
   answer: string;
   latencyMs?: number;
   timings?: { embedMs?: number; searchMs?: number; llmMs?: number };
   contextCharsUsed?: number;
-  sources?: Source[];
+  sources?: ChatSource[];
 };
 
 type IngestResponse = {
@@ -151,6 +166,7 @@ const chatInput = byId<HTMLTextAreaElement>("chatInput");
 const sendBtn = byId<HTMLButtonElement>("sendBtn");
 const cancelQueryBtn = byId<HTMLButtonElement>("cancelQueryBtn");
 const topKInput = byId<HTMLInputElement>("topKInput");
+const webModeInput = byId<HTMLSelectElement>("webModeInput");
 
 const fileInput = byId<HTMLInputElement>("fileInput");
 const uploadBtn = byId<HTMLButtonElement>("uploadBtn");
@@ -163,6 +179,8 @@ const statsContainer = byId<HTMLDivElement>("statsContainer");
 
 let activeQueryController: AbortController | null = null;
 let healthTimer: number | undefined;
+const chatHistory: ChatTurn[] = [];
+const HISTORY_LIMIT = 12;
 
 function showBanner(
   kind: "success" | "error",
@@ -209,7 +227,12 @@ tabButtons.forEach((button) => {
 function appendMessage(
   role: "user" | "assistant",
   text: string,
-  sources?: Source[],
+  options?: {
+    used?: { rag?: boolean; web?: boolean };
+    timings?: ChatResponse["timings"];
+    contextCharsUsed?: number;
+    sources?: ChatSource[];
+  },
 ): HTMLElement {
   const wrapper = document.createElement("article");
   wrapper.className = `message ${role}`;
@@ -218,35 +241,79 @@ function appendMessage(
   messageText.textContent = text;
   wrapper.appendChild(messageText);
 
-  if (role === "assistant" && sources) {
-    const sourcesBlock = document.createElement("div");
-    sourcesBlock.className = "sources";
-
-    const heading = document.createElement("strong");
-    heading.textContent = "Sources:";
-    sourcesBlock.appendChild(heading);
-
-    if (sources.length === 0) {
-      const empty = document.createElement("div");
-      empty.textContent = " none";
-      sourcesBlock.appendChild(empty);
-    } else {
-      const list = document.createElement("ul");
-      for (const source of sources) {
-        const item = document.createElement("li");
-        const index = typeof source.index === "number" ? source.index : "?";
-        const base = `${source.docId ?? "unknown"}:${index}`;
-        const distanceText =
-          typeof source.distance === "number"
-            ? ` (distance: ${source.distance.toFixed(4)})`
-            : "";
-        item.textContent = `${base}${distanceText}`;
-        list.appendChild(item);
-      }
-      sourcesBlock.appendChild(list);
+  if (role === "assistant" && options) {
+    const metaLines: string[] = [];
+    if (options.used) {
+      const usedDocs = options.used.rag ? "✅" : "❌";
+      const usedWeb = options.used.web ? "✅" : "❌";
+      metaLines.push(`Used: Docs ${usedDocs} Web ${usedWeb}`);
     }
 
-    wrapper.appendChild(sourcesBlock);
+    if (options.timings) {
+      const t = options.timings;
+      metaLines.push(
+        `Timings: total ${t.totalMs ?? "?"} ms (embed ${t.embedMs ?? "?"} / search ${t.searchMs ?? "?"} / web ${t.webMs ?? "?"} / llm ${t.llmMs ?? "?"} ms)`,
+      );
+    }
+
+    if (typeof options.contextCharsUsed === "number") {
+      metaLines.push(`Context chars: ${options.contextCharsUsed}`);
+    }
+
+    if (metaLines.length > 0) {
+      const meta = document.createElement("div");
+      meta.className = "sources";
+      meta.textContent = metaLines.join("\n");
+      wrapper.appendChild(meta);
+    }
+
+    const sources = options.sources ?? [];
+    const docSources = sources.filter((source): source is DocSource => source.type === "doc");
+    const webSources = sources.filter((source): source is WebSource => source.type === "web");
+
+    if (docSources.length > 0 || webSources.length > 0) {
+      const sourcesBlock = document.createElement("div");
+      sourcesBlock.className = "sources";
+
+      const heading = document.createElement("strong");
+      heading.textContent = "Sources:";
+      sourcesBlock.appendChild(heading);
+
+      if (docSources.length > 0) {
+        const docsTitle = document.createElement("div");
+        docsTitle.textContent = "Document sources:";
+        sourcesBlock.appendChild(docsTitle);
+
+        const docList = document.createElement("ul");
+        docSources.forEach((source) => {
+          const item = document.createElement("li");
+          const distanceText =
+            typeof source.distance === "number"
+              ? ` (distance: ${source.distance.toFixed(4)})`
+              : "";
+          item.textContent = `[DOC ${source.docId}:${source.index}]${distanceText}`;
+          docList.appendChild(item);
+        });
+        sourcesBlock.appendChild(docList);
+      }
+
+      if (webSources.length > 0) {
+        const webTitle = document.createElement("div");
+        webTitle.textContent = "Web sources:";
+        sourcesBlock.appendChild(webTitle);
+
+        const webList = document.createElement("ul");
+        webSources.forEach((source, idx) => {
+          const item = document.createElement("li");
+          const snippet = source.snippet ? ` — ${source.snippet}` : "";
+          item.textContent = `[WEB ${idx + 1}] ${source.title} (${source.url})${snippet}`;
+          webList.appendChild(item);
+        });
+        sourcesBlock.appendChild(webList);
+      }
+
+      wrapper.appendChild(sourcesBlock);
+    }
   }
 
   chatTranscript.appendChild(wrapper);
@@ -257,15 +324,15 @@ function appendMessage(
 function getTopKValue(): number {
   const parsed = Number(topKInput.value);
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 20) {
-    topKInput.value = "5";
-    return 5;
+    topKInput.value = "4";
+    return 4;
   }
   return parsed;
 }
 
 async function sendQuestion(): Promise<void> {
-  const question = chatInput.value.trim();
-  if (!question) {
+  const message = chatInput.value.trim();
+  if (!message) {
     showBanner("error", "Please type a question before sending.");
     return;
   }
@@ -278,7 +345,12 @@ async function sendQuestion(): Promise<void> {
     return;
   }
 
-  appendMessage("user", question);
+  appendMessage("user", message);
+  chatHistory.push({ role: "user", content: message });
+  if (chatHistory.length > HISTORY_LIMIT) {
+    chatHistory.splice(0, chatHistory.length - HISTORY_LIMIT);
+  }
+
   chatInput.value = "";
 
   const thinkingMessage = appendMessage("assistant", "thinking...");
@@ -291,10 +363,15 @@ async function sendQuestion(): Promise<void> {
   cancelQueryBtn.disabled = false;
 
   try {
-    const payload = await apiFetch<QueryResponse>("/query", {
+    const payload = await apiFetch<ChatResponse>("/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, topK: getTopKValue() }),
+      body: JSON.stringify({
+        message,
+        history: chatHistory.slice(-6),
+        topK: getTopKValue(),
+        web: webModeInput.value,
+      }),
       signal: activeQueryController.signal,
     });
 
@@ -314,10 +391,10 @@ async function sendQuestion(): Promise<void> {
     if (error instanceof DOMException && error.name === "AbortError") {
       appendMessage("assistant", "Query canceled.");
     } else {
-      const message =
+      const errMsg =
         error instanceof Error ? error.message : "Unknown query error";
-      appendMessage("assistant", `Error: ${message}`);
-      showBanner("error", `Query failed: ${message}`);
+      appendMessage("assistant", `Error: ${errMsg}`);
+      showBanner("error", `Query failed: ${errMsg}`);
     }
   } finally {
     activeQueryController = null;
@@ -559,7 +636,7 @@ async function loadAuditData(): Promise<void> {
 refreshAuditBtn.addEventListener("click", () => void loadAuditData());
 
 cancelQueryBtn.disabled = true;
-appendMessage("assistant", "Hi! Ask a question after ingesting a document.");
+appendMessage("assistant", "Hi! Ask a question. I will use your docs first and web search when needed.");
 void updateHealth();
 healthTimer = window.setInterval(() => void updateHealth(), HEALTH_POLL_MS);
 
