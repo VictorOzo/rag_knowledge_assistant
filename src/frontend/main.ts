@@ -39,14 +39,8 @@ type ChatTurn = {
 
 type ChatResponse = {
   answer: string;
-  used?: { rag?: boolean; web?: boolean };
-  timings?: {
-    embedMs?: number;
-    searchMs?: number;
-    webMs?: number;
-    llmMs?: number;
-    totalMs?: number;
-  };
+  latencyMs?: number;
+  timings?: { embedMs?: number; searchMs?: number; llmMs?: number };
   contextCharsUsed?: number;
   sources?: ChatSource[];
 };
@@ -382,17 +376,16 @@ async function sendQuestion(): Promise<void> {
     });
 
     thinkingMessage.remove();
-    appendMessage("assistant", payload.answer, {
-      used: payload.used,
-      timings: payload.timings,
-      contextCharsUsed: payload.contextCharsUsed,
-      sources: payload.sources ?? [],
-    });
-
-    chatHistory.push({ role: "assistant", content: payload.answer });
-    if (chatHistory.length > HISTORY_LIMIT) {
-      chatHistory.splice(0, chatHistory.length - HISTORY_LIMIT);
-    }
+    const timings = payload.timings;
+    const breakdown = timings
+      ? ` (embed ${timings.embedMs ?? "?"} ms / search ${timings.searchMs ?? "?"} ms / llm ${timings.llmMs ?? "?"} ms)`
+      : "";
+    const meta = `\n\nLatency: ${payload.latencyMs ?? "?"} ms${breakdown} | Context chars: ${payload.contextCharsUsed ?? "?"}`;
+    appendMessage(
+      "assistant",
+      `${payload.answer}${meta}`,
+      payload.sources ?? [],
+    );
   } catch (error) {
     thinkingMessage.remove();
     if (error instanceof DOMException && error.name === "AbortError") {

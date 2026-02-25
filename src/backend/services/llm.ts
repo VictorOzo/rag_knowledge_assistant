@@ -12,13 +12,6 @@ type GenerateAnswerParams = {
   keepAlive?: string;
 };
 
-type GenerateFromPromptParams = {
-  prompt: string;
-  numPredict?: number;
-  temperature?: number;
-  keepAlive?: string;
-};
-
 export function getPrompt(question: string, context: string): string {
   return [
     'You are a retrieval QA assistant.',
@@ -33,13 +26,14 @@ export function getPrompt(question: string, context: string): string {
   ].join('\n');
 }
 
-function normalizeNumber(value: number | undefined, fallback: number): number {
-  return Number.isFinite(value) ? Number(value) : fallback;
-}
-
-export async function generateAnswerFromPrompt(params: GenerateFromPromptParams): Promise<string> {
-  const numPredict = normalizeNumber(params.numPredict, defaultNumPredict);
-  const temperature = normalizeNumber(params.temperature, defaultTemperature);
+export async function generateAnswer(params: GenerateAnswerParams): Promise<string> {
+  const prompt = getPrompt(params.question, params.context);
+  const numPredict = Number.isFinite(params.numPredict)
+    ? Number(params.numPredict)
+    : defaultNumPredict;
+  const temperature = Number.isFinite(params.temperature)
+    ? Number(params.temperature)
+    : defaultTemperature;
   const keepAlive = params.keepAlive ?? defaultKeepAlive;
 
   const response = await fetch(`${ollamaBaseUrl}/api/generate`, {

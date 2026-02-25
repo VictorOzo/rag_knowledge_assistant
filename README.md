@@ -97,24 +97,13 @@ Core:
 - `OLLAMA_BASE_URL` (default `http://localhost:11434`)
 - `LLM_MODEL` (default `gemma3:4b`)
 - `EMBED_MODEL` (default `nomic-embed-text`)
-
-Performance / retrieval:
-
 - `DEFAULT_TOP_K` (default `4`)
 - `CONTEXT_CHAR_BUDGET` (default `3200`)
-- `LLM_NUM_PREDICT` (default `200`)
+- `LLM_NUM_PREDICT` (default `220`)
 - `LLM_TEMPERATURE` (default `0.2`)
 - `OLLAMA_KEEP_ALIVE` (default `10m`)
-
-Web tools:
-
-- `WEB_DISTANCE_THRESHOLD` (default `0.55`)
-- `WEB_MAX_RESULTS` (default `5`)
-- `WEB_FETCH_PAGES` (default `2`)
-- `WEB_CONTEXT_CHAR_BUDGET` (default `2000`)
-- `WEB_TIMEOUT_MS` (default `8000`)
-- `WEB_CACHE_TTL_MS` (default `300000`)
-- `WEB_RATE_LIMIT_RPM` (default `12`)
+- `EMBED_CONCURRENCY` (default `4`)
+- `EMBED_RETRIES` (default `3`)
 
 ### Example `.env`
 
@@ -130,19 +119,22 @@ LLM_MODEL=gemma3:4b
 EMBED_MODEL=nomic-embed-text
 DEFAULT_TOP_K=4
 CONTEXT_CHAR_BUDGET=3200
-LLM_NUM_PREDICT=200
+LLM_NUM_PREDICT=220
 LLM_TEMPERATURE=0.2
 OLLAMA_KEEP_ALIVE=10m
-WEB_DISTANCE_THRESHOLD=0.55
-WEB_MAX_RESULTS=5
-WEB_FETCH_PAGES=2
-WEB_CONTEXT_CHAR_BUDGET=2000
-WEB_TIMEOUT_MS=8000
-WEB_CACHE_TTL_MS=300000
-WEB_RATE_LIMIT_RPM=12
 ```
 
-## API examples
+
+## Performance tuning knobs
+
+For faster responses and better latency/quality tradeoffs, tune:
+
+- `DEFAULT_TOP_K`: fallback retrieval depth when client does not send `topK` (UI still overrides this when set).
+- `CONTEXT_CHAR_BUDGET`: max characters included in retrieved context before LLM call.
+- `LLM_NUM_PREDICT`: hard cap on generated tokens from Ollama (`options.num_predict`).
+- `OLLAMA_KEEP_ALIVE`: keeps model loaded between requests to avoid cold starts.
+
+## API examples (PowerShell-friendly)
 
 ### Ingest
 
