@@ -4,7 +4,7 @@ const API_BASE = (
   import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:3001"
 ).replace(/\/+$/, "");
 const HEALTH_POLL_MS = 15_000;
-const ALLOWED_EXTENSIONS = new Set(["txt", "md", "pdf"]);
+const ALLOWED_EXTENSIONS = new Set(["txt", "md", "pdf","docx"]);
 const LONG_TEXT_LIMIT = 180;
 
 type HealthResponse = {

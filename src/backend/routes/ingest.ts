@@ -6,12 +6,13 @@ import { deleteByDocId, upsertChunks } from "../services/vectorStore.js";
 import { initAuditDb, logIngestion } from "../db/audit.js";
 import { createRequire } from "node:module";
 
-const require = createRequire(import.meta.url); 
+const require = createRequire(import.meta.url);
 
+// pdf-parse can be finicky with ESM; require() tends to be most compatible
 const ingestRouter = new Hono();
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const ALLOWED_EXTENSIONS = new Set(["txt", "md", "pdf"]);
+const ALLOWED_EXTENSIONS = new Set(["txt", "md", "pdf", "docx"]);
 
 function getExtension(name: string): string {
   const parts = name.toLowerCase().split(".");
@@ -19,16 +20,21 @@ function getExtension(name: string): string {
 }
 
 async function parsePdf(buffer: Buffer): Promise<string> {
-  const pdfParse: unknown = require("pdf-parse-fork");
+  // If your setup uses pdfjs-dist instead, swap this accordingly.
+  const pdfParse: unknown = require("pdf-parse-fork"); // recommended if you switched
   if (typeof pdfParse !== "function") {
-    throw new Error(
-      `pdf-parse-fork is not a function (typeof=${typeof pdfParse})`,
-    );
+    throw new Error(`PDF parser is not a function (typeof=${typeof pdfParse})`);
   }
   const result = await (pdfParse as (b: Buffer) => Promise<{ text?: string }>)(
     buffer,
   );
   return String(result?.text ?? "");
+}
+
+async function parseDocx(buffer: Buffer): Promise<string> {
+  const mammoth: any = await import("mammoth");
+  const result = await mammoth.extractRawText({ buffer });
+  return String(result?.value ?? "");
 }
 
 ingestRouter.post("/", async (c) => {
@@ -38,7 +44,7 @@ ingestRouter.post("/", async (c) => {
   }
 
   const body = await c.req.parseBody({ all: true });
-  const fileInput = body.file;
+  const fileInput = (body as any).file;
   const file = Array.isArray(fileInput) ? fileInput[0] : fileInput;
 
   if (!(file instanceof File)) {
@@ -51,7 +57,7 @@ ingestRouter.post("/", async (c) => {
   const ext = getExtension(file.name);
   if (!ALLOWED_EXTENSIONS.has(ext)) {
     return c.json(
-      { error: "Unsupported file type. Allowed: txt, md, pdf." },
+      { error: "Unsupported file type. Allowed: txt, md, pdf, docx." },
       400,
     );
   }
@@ -76,8 +82,24 @@ ingestRouter.post("/", async (c) => {
         400,
       );
     }
+  } else if (ext === "docx") {
+    try {
+      text = await parseDocx(bytes);
+    } catch (err) {
+      return c.json(
+        {
+          error: "Failed to parse DOCX",
+          details: err instanceof Error ? err.message : String(err),
+        },
+        400,
+      );
+    }
   } else {
     text = bytes.toString("utf-8");
+  }
+
+  if (!text.trim()) {
+    return c.json({ error: "No extractable text found in document." }, 400);
   }
 
   const chunks = chunkText(text).map((chunk, index) => ({

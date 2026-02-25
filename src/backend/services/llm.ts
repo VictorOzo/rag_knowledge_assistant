@@ -1,10 +1,11 @@
-const ollamaBaseUrl = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
-const llmModel = process.env.LLM_MODEL ?? 'gemma3:4b';
+// src/backend/services/llm.ts
+const ollamaBaseUrl = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
+const llmModel = process.env.LLM_MODEL ?? "gemma3:4b";
 const defaultNumPredict = Number(process.env.LLM_NUM_PREDICT ?? 220);
 const defaultTemperature = Number(process.env.LLM_TEMPERATURE ?? 0.2);
-const defaultKeepAlive = process.env.OLLAMA_KEEP_ALIVE ?? '10m';
+const defaultKeepAlive = process.env.OLLAMA_KEEP_ALIVE ?? "10m";
 
-type GenerateAnswerParams = {
+export type GenerateAnswerParams = {
   question: string;
   context: string;
   numPredict?: number;
@@ -12,22 +13,29 @@ type GenerateAnswerParams = {
   keepAlive?: string;
 };
 
+type OllamaGenerateResponse = {
+  response?: string;
+};
+
 export function getPrompt(question: string, context: string): string {
   return [
-    'You are a retrieval QA assistant.',
-    'Use ONLY the provided context to answer the question.',
-    'If the answer is not in context, say you do not know based on the provided documents.',
-    '',
-    'Context:',
-    context || '[no context]',
-    '',
+    "You are a retrieval QA assistant.",
+    "Use ONLY the provided context to answer the question.",
+    "If the answer is not in context, say you do not know based on the provided documents.",
+    "",
+    "Context:",
+    context || "[no context]",
+    "",
     `Question: ${question}`,
-    'Answer:',
-  ].join('\n');
+    "Answer:",
+  ].join("\n");
 }
 
-export async function generateAnswer(params: GenerateAnswerParams): Promise<string> {
+export async function generateAnswer(
+  params: GenerateAnswerParams,
+): Promise<string> {
   const prompt = getPrompt(params.question, params.context);
+
   const numPredict = Number.isFinite(params.numPredict)
     ? Number(params.numPredict)
     : defaultNumPredict;
@@ -37,11 +45,11 @@ export async function generateAnswer(params: GenerateAnswerParams): Promise<stri
   const keepAlive = params.keepAlive ?? defaultKeepAlive;
 
   const response = await fetch(`${ollamaBaseUrl}/api/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: llmModel,
-      prompt: params.prompt,
+      prompt,
       stream: false,
       keep_alive: keepAlive,
       options: {
@@ -52,22 +60,14 @@ export async function generateAnswer(params: GenerateAnswerParams): Promise<stri
   });
 
   if (!response.ok) {
-    const bodyText = await response.text();
+    const bodyText = await response.text().catch(() => "");
     throw new Error(
-      `Ollama generate failed (${response.status} ${response.statusText}): ${bodyText || 'No response body'}`,
+      `Ollama generate failed (${response.status} ${response.statusText}): ${bodyText || "No response body"}`,
     );
   }
 
-  const payload = (await response.json()) as { response?: string };
-  return payload.response?.trim() || 'I do not know based on the provided documents.';
-}
-
-export async function generateAnswer(params: GenerateAnswerParams): Promise<string> {
-  const prompt = getPrompt(params.question, params.context);
-  return generateAnswerFromPrompt({
-    prompt,
-    numPredict: params.numPredict,
-    temperature: params.temperature,
-    keepAlive: params.keepAlive,
-  });
+  const payload = (await response.json()) as OllamaGenerateResponse;
+  return (
+    payload.response?.trim() || "I do not know based on the provided documents."
+  );
 }
