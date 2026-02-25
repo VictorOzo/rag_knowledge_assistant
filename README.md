@@ -93,8 +93,11 @@ Typical variables used in this project:
 - `OLLAMA_BASE_URL` (default `http://localhost:11434`)
 - `LLM_MODEL` (default `gemma3:4b`)
 - `EMBED_MODEL` (default `nomic-embed-text`)
-- `DEFAULT_TOP_K` (default `5`)
-- `CONTEXT_CHAR_BUDGET` (default `6000`)
+- `DEFAULT_TOP_K` (default `4`)
+- `CONTEXT_CHAR_BUDGET` (default `3200`)
+- `LLM_NUM_PREDICT` (default `220`)
+- `LLM_TEMPERATURE` (default `0.2`)
+- `OLLAMA_KEEP_ALIVE` (default `10m`)
 - `EMBED_CONCURRENCY` (default `4`)
 - `EMBED_RETRIES` (default `3`)
 
@@ -110,9 +113,22 @@ CHROMA_COLLECTION=rag_docs
 OLLAMA_BASE_URL=http://localhost:11434
 LLM_MODEL=gemma3:4b
 EMBED_MODEL=nomic-embed-text
-DEFAULT_TOP_K=5
-CONTEXT_CHAR_BUDGET=6000
+DEFAULT_TOP_K=4
+CONTEXT_CHAR_BUDGET=3200
+LLM_NUM_PREDICT=220
+LLM_TEMPERATURE=0.2
+OLLAMA_KEEP_ALIVE=10m
 ```
+
+
+## Performance tuning knobs
+
+For faster responses and better latency/quality tradeoffs, tune:
+
+- `DEFAULT_TOP_K`: fallback retrieval depth when client does not send `topK` (UI still overrides this when set).
+- `CONTEXT_CHAR_BUDGET`: max characters included in retrieved context before LLM call.
+- `LLM_NUM_PREDICT`: hard cap on generated tokens from Ollama (`options.num_predict`).
+- `OLLAMA_KEEP_ALIVE`: keeps model loaded between requests to avoid cold starts.
 
 ## API examples (PowerShell-friendly)
 

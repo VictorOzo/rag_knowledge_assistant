@@ -25,6 +25,7 @@ type Source = {
 type QueryResponse = {
   answer: string;
   latencyMs?: number;
+  timings?: { embedMs?: number; searchMs?: number; llmMs?: number };
   contextCharsUsed?: number;
   sources?: Source[];
 };
@@ -298,7 +299,11 @@ async function sendQuestion(): Promise<void> {
     });
 
     thinkingMessage.remove();
-    const meta = `\n\nLatency: ${payload.latencyMs ?? "?"} ms | Context chars: ${payload.contextCharsUsed ?? "?"}`;
+    const timings = payload.timings;
+    const breakdown = timings
+      ? ` (embed ${timings.embedMs ?? "?"} ms / search ${timings.searchMs ?? "?"} ms / llm ${timings.llmMs ?? "?"} ms)`
+      : "";
+    const meta = `\n\nLatency: ${payload.latencyMs ?? "?"} ms${breakdown} | Context chars: ${payload.contextCharsUsed ?? "?"}`;
     appendMessage(
       "assistant",
       `${payload.answer}${meta}`,
