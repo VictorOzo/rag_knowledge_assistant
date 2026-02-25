@@ -4,6 +4,9 @@ import { chunkText, hashContent } from "../services/chunker.js";
 import { embedBatch } from "../services/embedder.js";
 import { deleteByDocId, upsertChunks } from "../services/vectorStore.js";
 import { initAuditDb, logIngestion } from "../db/audit.js";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url); 
 
 const ingestRouter = new Hono();
 
@@ -16,9 +19,15 @@ function getExtension(name: string): string {
 }
 
 async function parsePdf(buffer: Buffer): Promise<string> {
-  const mod: any = await import("pdf-parse");
-  const pdfParseFn = mod?.default ?? mod; // supports both CJS/ESM shapes
-  const result = await pdfParseFn(buffer);
+  const pdfParse: unknown = require("pdf-parse-fork");
+  if (typeof pdfParse !== "function") {
+    throw new Error(
+      `pdf-parse-fork is not a function (typeof=${typeof pdfParse})`,
+    );
+  }
+  const result = await (pdfParse as (b: Buffer) => Promise<{ text?: string }>)(
+    buffer,
+  );
   return String(result?.text ?? "");
 }
 
@@ -56,7 +65,17 @@ ingestRouter.post("/", async (c) => {
 
   let text = "";
   if (ext === "pdf") {
-    text = await parsePdf(bytes);
+    try {
+      text = await parsePdf(bytes);
+    } catch (err) {
+      return c.json(
+        {
+          error: "Failed to parse PDF",
+          details: err instanceof Error ? err.message : String(err),
+        },
+        400,
+      );
+    }
   } else {
     text = bytes.toString("utf-8");
   }
