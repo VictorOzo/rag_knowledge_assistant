@@ -7,11 +7,70 @@
     <link rel="stylesheet" href="./styles/main.css" />
   </head>
   <body>
-    <main class="app">
-      <h1>RAG Knowledge Assistant</h1>
-      <button id="healthButton" type="button">Check Health</button>
-      <pre id="healthOutput" aria-live="polite">Press "Check Health" to query backend.</pre>
-    </main>
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <h1>RAG Knowledge Assistant</h1>
+          <p class="subtitle">Ingest documents, ask grounded questions, and inspect system audit logs.</p>
+        </div>
+        <div id="healthStatus" class="health-indicator" aria-live="polite">Checking backend…</div>
+      </header>
+
+      <div id="bannerContainer" class="banner-container" aria-live="polite"></div>
+
+      <nav class="tabs" role="tablist" aria-label="Main views">
+        <button class="tab-button active" data-tab="chat" role="tab" aria-selected="true" type="button">Chat</button>
+        <button class="tab-button" data-tab="ingest" role="tab" aria-selected="false" type="button">Ingest</button>
+        <button class="tab-button" data-tab="audit" role="tab" aria-selected="false" type="button">Audit</button>
+      </nav>
+
+      <main>
+        <section id="tab-chat" class="tab-panel active" role="tabpanel">
+          <div id="chatTranscript" class="transcript" aria-live="polite"></div>
+          <div class="chat-controls">
+            <label class="field-inline" for="topKInput">
+              Top K
+              <input id="topKInput" type="number" min="1" max="20" value="5" />
+            </label>
+            <button id="cancelQueryBtn" type="button" class="secondary">Cancel</button>
+          </div>
+          <div class="composer">
+            <textarea id="chatInput" rows="3" placeholder="Ask a question about your ingested documents..."></textarea>
+            <button id="sendBtn" type="button">Send</button>
+          </div>
+        </section>
+
+        <section id="tab-ingest" class="tab-panel" role="tabpanel" hidden>
+          <div class="ingest-controls">
+            <label for="fileInput">Select files (.txt, .md, .pdf)</label>
+            <input id="fileInput" type="file" multiple accept=".txt,.md,.pdf" />
+            <button id="uploadBtn" type="button">Upload</button>
+          </div>
+          <div id="ingestResults" class="results-list"></div>
+        </section>
+
+        <section id="tab-audit" class="tab-panel" role="tabpanel" hidden>
+          <div class="audit-toolbar">
+            <button id="refreshAuditBtn" type="button">Refresh</button>
+          </div>
+          <div class="audit-grid">
+            <section class="panel">
+              <h2>Recent Queries</h2>
+              <div id="queriesContainer"></div>
+            </section>
+            <section class="panel">
+              <h2>Recent Ingestions</h2>
+              <div id="ingestionsContainer"></div>
+            </section>
+            <section class="panel">
+              <h2>Stats</h2>
+              <div id="statsContainer"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
