@@ -9,6 +9,10 @@ export type RetrievedChunk = {
   distance: number;
 };
 
+type SearchFilters = {
+  docId?: string;
+};
+
 const chromaUrl = process.env.CHROMA_URL ?? 'http://localhost:8000';
 const collectionName = process.env.CHROMA_COLLECTION ?? 'rag_docs';
 
@@ -41,12 +45,19 @@ export async function upsertChunks(chunks: Chunk[], embeddings: number[][]): Pro
   });
 }
 
-export async function similaritySearch(queryEmbedding: number[], topK: number): Promise<RetrievedChunk[]> {
+export async function similaritySearch(
+  queryEmbedding: number[],
+  topK: number,
+  filters: SearchFilters = {},
+): Promise<RetrievedChunk[]> {
   const collection = await getCollection();
+  const where = filters.docId ? ({ docId: filters.docId } as never) : undefined;
+
   const result = await collection.query({
     queryEmbeddings: [queryEmbedding],
     nResults: topK,
-    include: ['documents', 'metadatas', 'distances'],
+    where,
+    include: ['documents', 'metadatas', 'distances'] as never,
   });
 
   const ids = result.ids[0] ?? [];
@@ -63,8 +74,12 @@ export async function similaritySearch(queryEmbedding: number[], topK: number): 
   }));
 }
 
-export async function mmrSearch(queryEmbedding: number[], topK: number): Promise<RetrievedChunk[]> {
-  const candidates = await similaritySearch(queryEmbedding, Math.min(30, topK * 3));
+export async function mmrSearch(
+  queryEmbedding: number[],
+  topK: number,
+  filters: SearchFilters = {},
+): Promise<RetrievedChunk[]> {
+  const candidates = await similaritySearch(queryEmbedding, Math.min(30, topK * 3), filters);
   const selected: RetrievedChunk[] = [];
 
   while (selected.length < topK && candidates.length > 0) {

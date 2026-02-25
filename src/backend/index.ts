@@ -7,6 +7,7 @@ import { logger } from "hono/logger";
 import healthRoute from "./routes/health.js";
 import ingestRouter from "./routes/ingest.js";
 import queryRouter from "./routes/query.js";
+import chatRouter from "./routes/chat.js";
 import auditRouter from "./routes/audit.js";
 
 const app = new Hono();
@@ -22,6 +23,7 @@ app.use(
 app.route("/health", healthRoute);
 app.route("/ingest", ingestRouter);
 app.route("/query", queryRouter);
+app.route("/chat", chatRouter);
 app.route("/audit", auditRouter);
 
 const port = Number(process.env.PORT ?? 3001);

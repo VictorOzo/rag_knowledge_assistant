@@ -30,7 +30,15 @@
           <div class="chat-controls">
             <label class="field-inline" for="topKInput">
               Top K
-              <input id="topKInput" type="number" min="1" max="20" value="5" />
+              <input id="topKInput" type="number" min="1" max="20" value="4" />
+            </label>
+            <label class="field-inline" for="webModeInput">
+              Web
+              <select id="webModeInput">
+                <option value="off">Off</option>
+                <option value="auto" selected>Auto</option>
+                <option value="on">On</option>
+              </select>
             </label>
             <button id="cancelQueryBtn" type="button" class="secondary">Cancel</button>
           </div>
